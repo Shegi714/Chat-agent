@@ -1,16 +1,21 @@
-# Stateless Chat Agent — LangGraph
+# Stateless Chat Agent
 
-## 📌 Что делает
+## What this does
 
-Простой агент, который:
-- Возвращает текущее UTC время при вопросе "What time is it?"
-- Во всех остальных случаях отвечает "What is my purpose?" на языке пользователя
+A stateless chat agent built with [LangGraph](https://github.com/langchain-ai/langgraph). It does the following:
 
-## 🚀 Запуск
+- Replies to every message
+- If the user asks for the current time (e.g., "What time is it?"), it calls a `get_current_time` tool that returns UTC time in ISO‑8601 format
+- Otherwise, it replies `"What is my purpose?"` **in the user's language**, using language detection and translation.
+
+---
+
+## How to run
 
 ```bash
-git clone <your_repo>
-cd <your_repo>
-python -m venv .venv && source .venv/bin/activate
+git clone <your-repo-url>
+cd your-repo
+python -m venv .venv
+source .venv/bin/activate     # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 langgraph dev
