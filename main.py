@@ -59,3 +59,13 @@ builder.add_edge("fallback", END)
 
 # Компиляция графа
 graph = builder.compile()
+
+if __name__ == "__main__":
+    print("Starting dev mode...")
+    print("Waiting for input... (type 'exit' to quit)\n")
+    while True:
+        msg = input("You: ")
+        if msg.strip().lower() in {"exit", "quit"}:
+            break
+        result = graph.invoke({"user_input": msg})
+        print("Bot:", result["output"])
