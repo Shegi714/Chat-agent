@@ -4,25 +4,25 @@ from typing import TypedDict, Optional
 from langdetect import detect
 from deep_translator import GoogleTranslator
 
-# Тип состояния чата
+# Тип состояния
 class ChatState(TypedDict):
     user_input: str
     output: Optional[str]
 
-# Инструмент: получение текущего времени
+# Инструмент: получение времени
 def get_current_time() -> dict:
     """Возвращает текущее UTC время в ISO‑8601 формате"""
     now = datetime.datetime.utcnow().replace(microsecond=0)
     return {"utc": now.isoformat() + "Z"}
 
-# Узел маршрутизации
+# Роутер: определяет, какой узел вызывать
 def router(state: ChatState) -> str:
     text = state["user_input"].lower()
     if "time" in text:
         return "get_time"
     return "fallback"
 
-# Узел: обрабатывает вызов get_current_time
+# Узел: возвращает текущее время
 def use_time_tool(state: ChatState) -> ChatState:
     response = get_current_time()
     return {
@@ -30,7 +30,7 @@ def use_time_tool(state: ChatState) -> ChatState:
         "output": f"The current UTC time is {response['utc']}"
     }
 
-# Узел: отвечает фразой "What is my purpose?" на языке пользователя
+# Узел: возвращает фразу "What is my purpose?" на языке пользователя
 def fallback_response(state: ChatState) -> ChatState:
     prompt = "What is my purpose?"
     try:
@@ -48,18 +48,15 @@ builder.add_node("router", router)
 builder.add_node("get_time", use_time_tool)
 builder.add_node("fallback", fallback_response)
 
-# Указываем точку входа
 builder.set_entry_point("router")
-
-# Указываем переходы
 builder.add_edge("router", "get_time")
 builder.add_edge("router", "fallback")
 builder.add_edge("get_time", END)
 builder.add_edge("fallback", END)
 
-# Компиляция графа
 graph = builder.compile()
 
+# Имитация langgraph dev
 if __name__ == "__main__":
     print("Starting dev mode...")
     print("Waiting for input... (type 'exit' to quit)\n")
