@@ -3,56 +3,62 @@ from langgraph.graph import StateGraph, END
 from typing import TypedDict, Optional
 from langdetect import detect
 from deep_translator import GoogleTranslator
+from langchain.llms import Ollama
 
 # Тип состояния
 class ChatState(TypedDict):
     user_input: str
     output: Optional[str]
 
-# Инструмент: получение времени
+# Инструмент: текущее UTC время
 def get_current_time() -> dict:
-    """Возвращает текущее UTC время в ISO‑8601 формате"""
     now = datetime.datetime.utcnow().replace(microsecond=0)
     return {"utc": now.isoformat() + "Z"}
 
-# Роутер: определяет, какой узел вызывать
+# Роутинг по сообщению
 def router(state: ChatState) -> str:
-    text = state["user_input"].lower()
-    if "time" in text:
+    if "time" in state["user_input"].lower():
         return "get_time"
-    return "fallback"
+    return "llm_fallback"
 
-# Узел: возвращает текущее время
+# Узел: ответ через get_current_time
 def use_time_tool(state: ChatState) -> ChatState:
-    response = get_current_time()
+    time = get_current_time()
     return {
         "user_input": state["user_input"],
-        "output": f"The current UTC time is {response['utc']}"
+        "output": f"The current UTC time is {time['utc']}"
     }
 
-# Узел: возвращает фразу "What is my purpose?" на языке пользователя
-def fallback_response(state: ChatState) -> ChatState:
-    prompt = "What is my purpose?"
+# Узел: ответ через локальную модель Ollama + перевод
+def llm_fallback(state: ChatState) -> ChatState:
+    base_prompt = "What is my purpose?"
+    user_text = state["user_input"]
     try:
-        lang = detect(state["user_input"])
+        lang = detect(user_text)
         if lang != "en":
-            translated = GoogleTranslator(source="en", target=lang).translate(prompt)
-            return {"user_input": state["user_input"], "output": translated}
+            prompt = f"Translate the following to {lang}: '{base_prompt}'"
+        else:
+            prompt = base_prompt
     except Exception:
-        pass
-    return {"user_input": state["user_input"], "output": prompt}
+        prompt = base_prompt
 
-# Сборка графа
+    # Вызов локальной модели через Ollama
+    llm = Ollama(model="llama3")  # по умолчанию порт 11434
+    result = llm(prompt)
+
+    return {"user_input": user_text, "output": result.strip()}
+
+# Построение LangGraph
 builder = StateGraph(ChatState)
 builder.add_node("router", router)
 builder.add_node("get_time", use_time_tool)
-builder.add_node("fallback", fallback_response)
+builder.add_node("llm_fallback", llm_fallback)
 
 builder.set_entry_point("router")
 builder.add_edge("router", "get_time")
-builder.add_edge("router", "fallback")
+builder.add_edge("router", "llm_fallback")
 builder.add_edge("get_time", END)
-builder.add_edge("fallback", END)
+builder.add_edge("llm_fallback", END)
 
 graph = builder.compile()
 

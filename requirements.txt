@@ -1,4 +1,4 @@
-wheel
 langgraph
+langchain
 langdetect
 deep-translator
